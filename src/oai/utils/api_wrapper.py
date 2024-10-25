@@ -4,7 +4,9 @@ import time
 import traceback
 from datetime import datetime
 
-import openai
+from openai import OpenAI
+
+client = OpenAI(api_key=os.environ['API_KEY'])
 
 from oai.utils.metadata import FINETUNE_IDS_PATH, MODEL_IDS_PATH, set_model_id, get_model_key
 from oai.utils.metadata import get_file_id, set_file_id, get_finetune_id, set_finetune_id
@@ -39,7 +41,7 @@ def create_completion(*args, verbose=True, error_while=None, **kwargs):
         if t:
             time.sleep(t)
         try:
-            response = openai.Completion.create(*args, **kwargs)
+            response = client.completions.create(*args, **kwargs)
             return response
         except Exception as e:
             if verbose:
@@ -63,13 +65,11 @@ def create_finetune_file(finetune_key: str, overwrite=False):
         raise FileNotFoundError("Finetune data file with file_key `{}` not found at: `{}`".format(finetune_key, path))
 
     with open(path) as f:
-        response = openai.File.create(
-            file=f,
-            purpose='fine-tune'
-        )
-    file_id = response["id"]
+        response = client.files.create(file=f,
+        purpose='fine-tune')
+    file_id = response.id
     set_file_id(finetune_key, file_id)
-    print("Created OpenAI File for `{}`: `{}`".format(finetune_key, response["id"]))
+    print("Created OpenAI File for `{}`: `{}`".format(finetune_key, response.id))
 
     return file_id
 
@@ -85,8 +85,8 @@ def create_finetune(file_key: str, base_model: str, dataset_key: str, train_key:
     if file_id is None:
         raise KeyError("OpenAI File with file_id `{}` does not exist".format(file_key))
 
-    response = openai.FineTune.create(training_file=file_id, model=base_model, **kwargs)
-    finetune_id = response["id"]
+    response = client.fine_tunes.create(training_file=file_id, model=base_model, **kwargs)
+    finetune_id = response.id
     set_finetune_id(model_key, finetune_id)
     print("Created OpenAI finetune `{}`: `{}`".format(model_key, finetune_id))
 
@@ -130,12 +130,12 @@ def fetch_model_ids():
     print("-" * 100)
     for model_key in model_keys_to_fetch:
         finetune_id = finetune_ids[model_key]
-        response = openai.FineTune.retrieve(finetune_id)
-        model_id = response["fine_tuned_model"]
+        response = client.fine_tunes.retrieve(finetune_id)
+        model_id = response.fine_tuned_model
         if model_id is not None:
             set_model_id(model_key, model_id)
             done += 1
-        print("{:<80s}{:<20s}".format(model_key, response["status"]))
+        print("{:<80s}{:<20s}".format(model_key, response.status))
     print("-" * 100)
     print("Fetched {} of {} model ids".format(done, total))
 

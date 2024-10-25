@@ -48,10 +48,10 @@ def batch_infer_samples(samples: List[Dict], model_id: str, key_prefix: None, ba
             prompts = [s[prompt_key] for s in batch_samples]
             response = create_completion(model=model_id, prompt=prompts, max_tokens=max_tokens,
                                          temperature=temperature, n=1, stop=STOP_PHRASE)
-            assert len(response["choices"]) == len(batch_samples)
+            assert len(response.choices) == len(batch_samples)
 
-            completions = [c["text"] for c in response["choices"]]
-            finish_reasons = [c["finish_reason"] for c in response["choices"]]
+            completions = [c.text for c in response.choices]
+            finish_reasons = [c.finish_reason for c in response.choices]
             for sample in batch_samples:
                 sample[completion_key] = completions.pop(0)
                 sample[finish_reason_key] = finish_reasons.pop(0)
